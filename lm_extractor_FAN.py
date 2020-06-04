@@ -1,5 +1,4 @@
 import face_alignment
-from skimage import io
 from pathlib import Path
 import time
 import json

@@ -18,7 +18,8 @@ subdirs = [x for x in input_path.iterdir() if x.is_dir()]
 
 output_path = Path(args.op)
 
-for subdir in subdirs:
+for index,subdir in enumerate(subdirs):
+    print('Extrayendo landmarks de la carpeta ' + str(index) + '/' + str(len(subdirs)))
     lm_extractor_FAN.landmark_from_dir(subdir, output_path, subdir.name)
     print('Landmarks extracted for ' + subdir.name)
 

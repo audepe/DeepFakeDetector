@@ -24,6 +24,7 @@ for vid in args.vids:
         os.mkdir(folder_path)
     except OSError:
         print ("Creation of the directory %s failed" % folder_path)
+        continue
     else:
         print ("Successfully created the directory %s " % folder_path)
 
