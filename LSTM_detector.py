@@ -33,6 +33,13 @@ def load_landmarks(path):
                 lm[0] = np.interp(lm[0],[0,1920],[-1,1])
                 lm[1] = np.interp(lm[1],[0,1080],[-1,1])
 
+            past_frame = frame_lm[0]
+            for lm in frame_lm:
+                aux = past_frame - lm
+                past_frame = lm
+                lm = aux
+
+
             video_landmarks.append(frame_lm)
         data.append(np.asarray(video_landmarks))
     return np.asarray(data)
@@ -66,18 +73,18 @@ def create_model():
     # La capa LSTM espera una entrada 3D tal que [samples, timesteps, features]
     print ('Creando el modelo.')
     model = Sequential()
-    model.add(LSTM(100))
+    model.add(LSTM(100, return_sequences=True))
     model.add(Dropout(0.2))
     model.add(Dense(1, activation='sigmoid'))
     print ('Compilando el modelo.')
     model.compile(loss='binary_crossentropy',
-                  optimizer='adam',
-                  metrics=['accuracy'])
+                    optimizer='adam',
+                    metrics=['accuracy'])
     return model
 
 def train_model(model, data, labels, epochs):
     data_train, data_test, labels_train, labels_test = train_test_split(data, labels, test_size=0.2)
-    return model.fit(data_train, labels_train, epochs=1000, batch_size=100, validation_data=(data_test, labels_test), verbose=1)
+    return model.fit(data_train, labels_train, epochs=epochs, validation_data=(data_test, labels_test), verbose=1)
 
 def save_model(model, name):
     with open(name + ".json", "w") as json_file:
@@ -93,7 +100,7 @@ def main():
 
     data,labels = data_treatment(Path('./landmarks'))
     
-    train_model(model, data, labels,10000)
+    train_model(model, data, labels, 10000)
     save_weights(model,'latest')
 
 if __name__ == "__main__":

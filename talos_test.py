@@ -18,12 +18,15 @@ def check_gpu():
 def load_landmarks(path):
     files = [x for x in path.iterdir() if x.is_file() ]
     data = []
-
+    
     for file in files:
         video_landmarks = []
 
         with open(file) as f:
             file_data = json.load(f)
+
+        if len(file_data.keys()) != 251:
+            print(str(file) + ' tiene una cantidad de frames distinta a la requerida')
 
         for key in sorted(file_data.keys(), key=lambda x: int(Path(x).stem.replace('frame',''))):
             frame_lm = np.asarray(file_data[key])
@@ -32,8 +35,14 @@ def load_landmarks(path):
                 lm[0] = np.interp(lm[0],[0,1920],[-1,1])
                 lm[1] = np.interp(lm[1],[0,1080],[-1,1])
 
-            video_landmarks.append(frame_lm)
+            past_frame = frame_lm[0]
+            for lm in frame_lm:
+                aux = past_frame - lm
+                past_frame = lm
+                lm = aux
 
+
+            video_landmarks.append(frame_lm)
         data.append(np.asarray(video_landmarks))
     return np.asarray(data)
         
@@ -79,9 +88,10 @@ def create_model(params):
 def train_model(model, x_train, y_train, x_val, y_val, params):
     #data_train, data_test, labels_train, labels_test = train_test_split(data, labels, test_size=0.2)
     return model.fit(x_train, y_train, 
-                    epochs=params['epochs'], 
+                    epochs=params['epochs'],
+                    batch_size=params['batch_size'],
                     validation_data=(x_val, y_val), 
-                    verbose=2, shuffle=False)
+                    verbose=1, shuffle=False)
 
 def compile_and_train(x_train, y_train, x_val, y_val, params):
     model = create_model(params)
@@ -92,7 +102,8 @@ def compile_and_train(x_train, y_train, x_val, y_val, params):
 def main():
     p = {
      'first_layer': [100, 150, 200],
-     'epochs': [100],
+     'epochs': [10],
+     'batch_size': (10,500, 5),
      'dropout': (0.2, 0.5, 2),
      'lr': (0.1, 10, 5),
      'optimizer': [Adam, Nadam],
