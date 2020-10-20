@@ -121,34 +121,99 @@ def split_array(arr, parts):
         
 
 def multi_predict(video, parts, model):
-    predictions = []
+    predict = model.predict(video)
 
-    for part in range(parts):
-        print('Shape de las partes')
-        print(video[part].shape)
-        predict = model.predict(video[part].reshape(1,video[part].shape[0],video[part].shape[1]))
-        print('Shape de una predicción.')
-        print(predict.shape)
-        predictions.append(predict)
+    return np.split(predict, predict.shape[0]/parts)
 
-    predictions = np.asarray(predictions)
+def get_precision_recall(predictions, labels, criteria, verbose=False):
 
-    return predictions.reshape(predictions.shape[0])
+    
+    false_positives = 0
+    true_positives = 0
+    false_negatives = 0
+    true_negatives = 0
+
+    for prediction,label in zip(predictions,labels):
+        if label[0] > 0.5:
+            if prediction >= criteria:
+                true_positives += 1
+            else:
+                false_negatives += 1
+        else:
+            if prediction >= criteria:
+                false_positives += 1
+            else:
+                true_negatives += 1
+
+    if verbose:
+        print('Criteria:')
+        print(criteria)
+        print('Predictions size:')
+        print(len(predictions))
+        print('false_positives')
+        print(false_positives)
+        print('true_positives')
+        print(true_positives)
+        print('false_negatives')
+        print(false_negatives)
+        print('true_negatives')
+        print(true_negatives)
+
+    precision = true_positives / (true_positives + false_positives)
+    recall = true_positives / (true_positives + false_negatives)
+    
+    score = 2 * ( precision * recall / (precision + recall))
+    
+    data = {
+        'true_positives' : true_positives,
+        'false_positives' : false_positives,
+        'false_negatives' : false_negatives,
+        'true_negatives' : true_negatives
+    }
+
+    return precision, recall, score, data
 
 def load_and_predict(path, video, parts):
     model = load_model(path)
-    print('Shape de los datos.')
-    print(video.shape)
-    print('Partes a dividir.')
-    print(parts)
     predictions = multi_predict(video,parts,model)
     return predictions
+    
+def apply_threshold(threshold, predictions):
+    tf_preds = []
+
+    for pred in predictions:
+        score = 0;
+        for part in pred:
+            if part >= threshold:
+                score += 1
+        tf_preds.append(score)
+
+    return tf_preds
+
+def load_predictions(path):
+    with open(str(path)) as f:
+        file_data = json.load(f)
+    
+    new_preds = []
+    predictions = file_data["preds"]
+    labels = file_data["labels"]
+    for prediction in predictions:
+        new_el = []
+        for el in prediction:
+            new_el.append(el[0])
+        new_preds.append(new_el)
+
+    new_labels = []
+    for i in range(len(predictions)):
+        new_labels.append(labels[i*3])
+
+    return new_preds,new_labels
 
 def main():
     model = create_model()
     data,labels = data_treatment(Path('./landmarks'), 3)
     
     train_model(model, data, labels, 100)
-    save_model_and_weights(model, 'model-and-weights')
+    #save_model_and_weights(model, 'model-and-weights')
 if __name__ == "__main__":
     main()
