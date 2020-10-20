@@ -1,4 +1,6 @@
 import LSTM_detector as ld
+import numpy as np
+import json
 from pathlib import Path
 
 def test_load_landmarks():
@@ -50,6 +52,47 @@ def test_multipredict():
     print('Shape de las predicciones.')
     print(predictions.shape)
 
+def generate_predictions(parts):
+    data,labels = ld.data_treatment(Path('./landmarks'), parts)
+    predictions = ld.load_and_predict('model-and-weights.h5', data, parts)
+
+    predictions_list = []
+
+    for pred in predictions:
+        predictions_list.append(pred.tolist())
+
+    labels = labels.tolist()
+
+    pred_dict = {
+        "preds" : predictions_list,
+        "labels" : labels
+    }
+
+    with open('preds-out-dict.json', "w") as write_file:
+        json.dump(pred_dict, write_file)
+
+def generate_outcomes():
+    predictions,labels = ld.load_predictions(Path('./preds-out-dict.json'))
+    thresholds = [0.5, 0.7, 0.9]
+
+    scored_preds = []
+
+    for threshold in thresholds:
+        scored_preds.append(ld.apply_threshold(threshold, predictions))
+    
+    preds_by_threshold = {}
+
+    for idx,pred in enumerate(scored_preds):  
+        group_of_preds = []
+
+        for i in range(4):                
+            group_of_preds.append(ld.get_precision_recall(pred, labels, i))
+
+        preds_by_threshold[str(thresholds[idx])] = group_of_preds
+    
+    return preds_by_threshold
+        
+
 def main():
     # test_load_landmarks()
     # test_model_compile()
@@ -57,7 +100,9 @@ def main():
     # test_data_treatment()
     # print_model_summary()
     # test_train()
-    test_multipredict()
+    # test_multipredict()
+    # generate_predictions(3)
+    generate_outcomes()
 
 if __name__ == "__main__":
     main()
